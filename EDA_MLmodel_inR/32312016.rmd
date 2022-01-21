@@ -1,0 +1,422 @@
+---
+title: "Exploratory Data Analysis and Model Building"
+author: "Syed Kabir"
+date: "1/21/2022"
+output: 
+  html_document:
+    toc: true # table of content true
+    toc_depth: 3  # upto three depths of headings 
+    number_sections: true  ## if you want number sections at each table header
+    theme: united  # many options for theme, this one is my favorite.
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# installing all required packages
+#install.packages('plyr', repos="http://cran.rstudio.com/")
+#install.packages('ggplot2', repos="http://cran.rstudio.com/")
+#install.packages('psych')
+#install.packages('gridExtra')
+#install.packages('ISLR')
+#install.packages('MASS')
+#install.packages('caret', repos="http://cran.rstudio.com/")
+#install.packages('car')
+#install.packages('psych')
+```
+
+
+```{r}
+library(psych)
+library(gridExtra) 
+library(ggplot2)
+library(car)
+library(caret)
+library(tidyverse) 
+library(magrittr)
+library(MASS)
+library(psych)
+
+```
+
+# Introduction:
+This assignment is to perform exploratory data analysis on insurance data followed by appropriate modelling to predict whether a customer of a insurance company will stay or leave. Sixteen distinguishing factors are given in the data-set in understanding the customer churn. Two data-sets are given:
+
+  a) trainSet.csv which contains 27126 observations
+
+  b) testSet.csv which contains 6782 observations
+
+  So, trainSet data will be used to perform exploratory analysis and training the model. Two distinguished models will be build-up using training data. On the other hand, testSet.csv will be used for identifying model accuracy and selecting better model.
+
+```{r}
+insurance1 <- read.csv('trainSet.csv', header = TRUE, sep = ',')
+testset <- read.csv('testSet.csv', header = TRUE, sep = ',')
+```
+
+```{r}
+head(insurance1)
+```
+```{r}
+# Now, let's check the number of variables, rows, variable names and their types
+str(insurance1)
+```
+The structure of the training data set shows that:
+
+feature_o, feature_1, feature_2, feature_3,feature_4, feature_5 and feature_6 are continuous type numerical variables.
+
+feature_7, feature_8, feature_9, feature_10,feature_11, feature_12, feature_13, feature_14 and feature_15 are discrete type variables.
+
+```{r}
+# Let's check how many unique values are avilable for each variable:
+sapply(insurance1, function(x) length(unique(x)))
+```
+So, feature_1 has highest highest number of unique values.
+feature_10, feature_11, feature_12, labels are of binary.
+feature_8 and feature_13 have three unique values : 0,1 and 2
+feature_9 and feature_15 have four unique values : 0,1,2 and 3
+
+# EDA:
+
+```{r}
+summary(insurance1)
+```
+```{r}
+round(describe(insurance1), 3)
+```
+Some observations from the Summary:
+
+* The range for feature_1,feature_3,feature_4 and feature_6 is relatively high (from 19 to 29) across the samples compared to other variables.
+* The range for feature_0,feature_5,feature_11 is moderately large (from 7 to 11) across the samples compared to other variables. The value of other features varies from 0 to 3.157
+* The minimum value for feature_1 to feature_6 is negative. For others, minimum value is zero.
+* The mean value for feature_1 to feature_6 is very close to zero(some are negatives). For others, mean is positive.
+* The median value for feature_1 to feature_6 is negatives. For others, median value is positive.
+* So values of different features varie in different scales. If the data isn’t normalized it will lead to a baised outcome.
+
+## Summary Statistics and Variances: After data normalization 
+
+```{r}
+#Normalization
+normalize <- function(x) {
+return ((x - min(x)) / (max(x) - min(x))) }
+```
+
+```{r}
+insurance <- as.data.frame(lapply(insurance1, normalize))
+summary(insurance)
+```
+ 
+ So, all the features are normalised in the range of 0 to 1. Binary variables remain unchanged. The variance of the data after normalization is:
+ 
+```{r}
+sort(apply(insurance[-17], 2, sd))
+```
+ 
+So, after normaloisation, it is clear that feature_1,feature_3,feature_4,feature_6 has very low variance and feature_11 has the highest variance.
+
+## Univariate Analysis:
+
+### Data is imbalanced in Target Variable:
+
+```{r}
+p16<-ggplot(aes(x=labels), data =  insurance) +
+   geom_histogram(color = I('black'), fill = "blue") +
+   ggtitle('labels distribution')
+p16
+```
+
+Majority of the labels are zero. So, the data is heavily imbalanced
+
+### Outliers among the features:
+
+* Boxplot of feature_0, feature_1, feature_3, feature_4, feature_5, feature_6 are showing many outliers for higher values.
+* Only feature_1 and feature_15 have outliers for lower values.
+
+```{r}
+par(mfrow = c(3,6)) # 6 x 2 grid
+for (i in 1:(length(insurance))) {
+        boxplot(insurance[,i], main = names(insurance[i]), type="l", col = 'lightblue') 
+}
+```
+It is very hard to assess the distribution observing the boxplot for many features. So let's have a look on distribution for features
+
+### Histogram of all variables:
+
+```{r}
+options(repr.plot.width=15, repr.plot.height=15)
+p0<-ggplot(aes(x=feature_0), data =  insurance) +
+    geom_histogram(color = I('black'), fill = "red") + 
+    ggtitle('feature_0 distribution')
+
+p1<-ggplot(aes(x=feature_1), data =  insurance) +
+    geom_histogram(color = I('black'), fill = "red") + 
+    ggtitle('feature_1 distribution')
+
+p2<-ggplot(aes(x=feature_2), data =  insurance) +
+    geom_histogram(color = I('black'), fill = "red") + 
+    ggtitle('feature_2 distribution')
+
+p3<-ggplot(aes(x=feature_3), data =  insurance) +
+    geom_histogram(color = I('black'), fill = "red") + 
+    ggtitle('feature_3 distribution')
+
+p4<-ggplot(aes(x=feature_4), data =  insurance) +
+    geom_histogram(color = I('black'), fill = "red") + 
+    ggtitle('feature_4 distribution')
+
+p5<-ggplot(aes(x=feature_5), data =  insurance) +
+    geom_histogram(color = I('black'), fill = "red") + 
+    ggtitle('feature_5 distribution')
+
+p6<-ggplot(aes(x=feature_6), data =  insurance) +
+    geom_histogram(color = I('black'), fill = "red") +
+    ggtitle('feature_6 distribution')
+
+p7<-ggplot(aes(x=feature_7), data =  insurance) +
+    geom_histogram(color = I('black'), fill = "red") +
+    ggtitle('feature_7 distribution')
+
+p8<-ggplot(aes(x=feature_8), data =  insurance) +
+    geom_histogram(color = I('black'), fill = "red") +
+    ggtitle('feature_8 distribution')
+
+p9<-ggplot(aes(x=feature_9), data =  insurance) +
+    geom_histogram(color = I('black'), fill = "red") +
+    ggtitle('feature_8 distribution')
+
+p10<-ggplot(aes(x=feature_10), data =  insurance) +
+    geom_histogram(color = I('black'), fill = "red") +
+    ggtitle('feature_10 distribution')
+
+p11<-ggplot(aes(x=feature_11), data =  insurance) +
+    geom_histogram(color = I('black'), fill = "red") +
+    ggtitle('feature_11 distribution')
+
+p12<-ggplot(aes(x=feature_12), data =  insurance) +
+    geom_histogram(color = I('black'), fill = "red") +
+    ggtitle('feature_12 distribution')
+
+p13<-ggplot(aes(x=feature_13), data =  insurance) +
+    geom_histogram(color = I('black'), fill = "red") +
+    ggtitle('feature_13 distribution')
+
+p14<-ggplot(aes(x=feature_14), data =  insurance) +
+    geom_histogram(color = I('black'), fill = "red") +
+    ggtitle('feature_14 distribution')
+
+p15<-ggplot(aes(x=feature_15), data =  insurance) +
+    geom_histogram(color = I('black'), fill = "red") +
+    ggtitle('feature_15 distribution')
+
+#p16<-ggplot(aes(x=labels), data =  insurance) +
+#    geom_histogram(color = I('black'), fill = "red") +
+#    ggtitle('labels distribution')
+
+# plot all 16, 4 x 4 
+
+grid.arrange(p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, ncol = 4)
+```
+* feature_0 is showing close to a uniform distribution with right skewness.
+* feature_1, feature_3, feature_4,feature_5 and feature_6 are heavily right skewed.
+* feature_2 distribution is multimodal. Significant number of values are negative.
+* labels distribution clearly shows that only a fraction of customer will churn.
+
+## Bivariate Analysis:
+
+### Correlations among the features:
+
+```{r}
+round(cor(insurance[1:17]),3)
+```
+The following features are highly corelated:
+* feature 5 and feature 15 are highly corelated negatively.
+
+The following features are moderatelyly corelated:
+* feature 0 and feature 8 negatively
+* feature 5 and feature 6 positively
+* feature 6 and feature 15 negatively
+* feature 13 and feature 14 positively
+
+The following features are low corelated:
+* feature 0 and feature 11 negatively
+* feature 2 and feature 4 positively
+* feature 5 and feature 13 negatively
+* feature 6 and feature 13 negatively
+* feature 7 and feature 9 positively
+* feature 11 and feature 13 positively
+* feature 11 and feature 14 positively
+* feature 13 and feature 15 positively
+
+The following features are corelated with labels:
+* feature_3 positively moderate correlation
+* feature_5, feature_6 low positive correlation
+* feature_11, feature_13 low negative correlation
+
+### Plot for Strongest Corelations:
+
+```{r}
+plot(insurance$feature_5, insurance$feature_15)
+```
+* Very high value (=3) of feature_15 is only available when feature_5 values are relatively low(<6)
+* feature_5 values are in higher range more when feature_15 values are relatively low.
+
+### Investigating feature_3 which has strongest correlations with labels
+```{r}
+# For better analysis, labels is converted to factor type
+# As feature_3 has higher correlation with labels, let's investigate the this two variables
+insurance$labels <- as.factor(insurance$labels)
+p4 = ggplot(aes(x=feature_3),data =insurance) + geom_density(aes(fill = labels)) +  ggtitle('feature_3 density by labels')
+p4
+```
+It is clearly evident that data density is distributed with low spreading for feature_3 when labels value is 0 compared to 1 value.
+
+### Investigating data spreading of all features w.r.t the classes of labels
+
+```{r}
+options(repr.plot.width=15, repr.plot.height=15)
+p1=ggplot(aes(x=feature_0),data =insurance) + geom_density(aes(fill = labels)) +  ggtitle('feature_0 density by labels') + theme(plot.title = element_text(size = 5, face = "bold"),axis.text=element_text(size=5), axis.title=element_text(size=5),legend.title = element_text(size = 5), 
+               legend.text = element_text(size = 5)) 
+p2= ggplot(aes(x=feature_1),data =insurance) + geom_density(aes(fill = labels)) +  ggtitle('feature_1 density by labels') + theme(plot.title = element_text(size = 5, face = "bold"),axis.text=element_text(size=5), axis.title=element_text(size=5),legend.title = element_text(size = 5), 
+               legend.text = element_text(size = 5)) 
+p3 = ggplot(aes(x=feature_2),data =insurance) + geom_density(aes(fill = labels)) +  ggtitle('feature_2 density by labels') + theme(plot.title = element_text(size = 5, face = "bold"),axis.text=element_text(size=5), axis.title=element_text(size=5),legend.title = element_text(size = 5), 
+               legend.text = element_text(size = 5)) 
+p4 = ggplot(aes(x=feature_3),data =insurance) + geom_density(aes(fill = labels)) +  ggtitle('feature_3 density by labels') + theme(plot.title = element_text(size = 5, face = "bold"),axis.text=element_text(size=5), axis.title=element_text(size=5),legend.title = element_text(size = 5), 
+               legend.text = element_text(size = 5)) 
+p5 = ggplot(aes(x=feature_4),data =insurance) + geom_density(aes(fill = labels)) +  ggtitle('feature_4 density by labels') + theme(plot.title = element_text(size = 5, face = "bold"),axis.text=element_text(size=5), axis.title=element_text(size=5),legend.title = element_text(size = 5), 
+               legend.text = element_text(size = 5)) 
+p6 = ggplot(aes(x=feature_5),data =insurance) + geom_density(aes(fill = labels)) +  ggtitle('feature_5 density by labels') + theme(plot.title = element_text(size = 5, face = "bold"),axis.text=element_text(size=5), axis.title=element_text(size=5),legend.title = element_text(size = 5), 
+               legend.text = element_text(size = 5)) 
+p7 = ggplot(aes(x=feature_6),data =insurance) + geom_density(aes(fill = labels)) +  ggtitle('feature_6 density by labels') + theme(plot.title = element_text(size = 5, face = "bold"),axis.text=element_text(size=5), axis.title=element_text(size=5),legend.title = element_text(size = 5), 
+               legend.text = element_text(size = 5)) 
+p8 = ggplot(aes(x=feature_7),data =insurance) + geom_density(aes(fill = labels)) +  ggtitle('feature_7 density by labels') + theme(plot.title = element_text(size = 5, face = "bold"),axis.text=element_text(size=5), axis.title=element_text(size=5),legend.title = element_text(size = 5), 
+               legend.text = element_text(size = 5)) 
+p9 = ggplot(aes(x=feature_8),data =insurance) + geom_density(aes(fill = labels)) +  ggtitle('feature_8 density by labels') + theme(plot.title = element_text(size = 5, face = "bold"),axis.text=element_text(size=5), axis.title=element_text(size=5),legend.title = element_text(size = 5), 
+               legend.text = element_text(size = 5)) 
+p10 = ggplot(aes(x=feature_9),data =insurance) + geom_density(aes(fill = labels)) +  ggtitle('feature_9 density by labels') + theme(plot.title = element_text(size = 5, face = "bold"),axis.text=element_text(size=5), axis.title=element_text(size=5),legend.title = element_text(size = 5), 
+               legend.text = element_text(size = 5)) 
+p11 = ggplot(aes(x=feature_10),data =insurance) + geom_density(aes(fill = labels)) +  ggtitle('feature_10 density by labels') + theme(plot.title = element_text(size = 5, face = "bold"),axis.text=element_text(size=5), axis.title=element_text(size=5),legend.title = element_text(size = 5), 
+               legend.text = element_text(size = 5)) 
+p12 = ggplot(aes(x=feature_11),data =insurance) + geom_density(aes(fill = labels)) +  ggtitle('feature_11 density by labels') + theme(plot.title = element_text(size = 5, face = "bold"),axis.text=element_text(size=5), axis.title=element_text(size=5),legend.title = element_text(size = 5), 
+               legend.text = element_text(size = 5)) 
+p13 = ggplot(aes(x=feature_12),data =insurance) + geom_density(aes(fill = labels)) +  ggtitle('feature_12 density by labels') + theme(plot.title = element_text(size = 5, face = "bold"),axis.text=element_text(size=5), axis.title=element_text(size=5),legend.title = element_text(size = 5), 
+               legend.text = element_text(size = 5)) 
+p14 = ggplot(aes(x=feature_13),data =insurance) + geom_density(aes(fill = labels)) +  ggtitle('feature_13 density by labels') + theme(plot.title = element_text(size = 5, face = "bold"),axis.text=element_text(size=5), axis.title=element_text(size=5),legend.title = element_text(size = 5), 
+               legend.text = element_text(size = 5)) 
+p15 = ggplot(aes(x=feature_14),data =insurance) + geom_density(aes(fill = labels)) +  ggtitle('feature_14 density by labels') + theme(plot.title = element_text(size = 5, face = "bold"),axis.text=element_text(size=5), axis.title=element_text(size=5),legend.title = element_text(size = 5), 
+               legend.text = element_text(size = 5)) 
+p16 = ggplot(aes(x=feature_15),data =insurance) + geom_density(aes(fill = labels)) +  ggtitle('feature_15 density by labels') + theme(plot.title = element_text(size = 5, face = "bold"),axis.text=element_text(size=5), axis.title=element_text(size=5),legend.title = element_text(size = 5), 
+               legend.text = element_text(size = 5)) 
+
+grid.arrange( p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15,p16, ncol = 3)
+```
+No feature shows specific independence in data spreading for each values of labels.
+
+### Investigating relations among continuous features:
+
+```{r}
+# Now let's investigate the continuous features and labels in the data.
+library(car) 
+scatterplotMatrix(insurance[,c(1:7)],cex=0.2,main="Scatterplot Matrix for Insurance Data Using Floating Variables")
+```
+
+* Feature_3 has nonlinear negative relationship with almost all numeric features.
+* Feature_1 and feature_4 has non-linear negative relationship with feature_6
+* feature_1 and feature_4 relationship is also nonlinear negative.
+
+## Multivariate EDA :
+
+### Feature_3 data spreading for each labels and for each value of feature_15:
+
+```{r}
+# Feature_3 is highlighted here as it has better relationship with labels
+ggplot(aes(x=feature_3),data =insurance) + geom_density(aes(fill = labels)) +
+    facet_wrap(~feature_15) +
+    ggtitle('Density of feature_3 with respect to feature_15 and labels')
+```
+
+* From the above plot, there doesn't seem to be any specific seprability of labels considering data for feature_3 and feature_15. 
+* However value 0 of labels tends to exhibit a higher feature_3 value density than value 1 of labels for all the values of feature_15. 
+* Value 1 of labels tends to exhibit a spreader distribution of feature_3 value than value 1 of labels for all the values of feature_15.
+* The feature_15 value of .667 exhibits a narrower spread for feature_3 value between 0 and 0.25 compared to other feature_15 values.
+
+### Feature_3 data spreading for each labels and for each value of feature_13:
+
+```{r}
+
+ggplot(aes(x=feature_3),data =insurance) + geom_density(aes(fill = labels)) +
+    facet_wrap(~feature_13) +
+    ggtitle('Density of feature_3 with respect to feature_13 and labels')
+```
+
+* From the above analysis plot,feature_3 shows more independence for each labels for higher value (when value is 1) of feature_13.
+* However value 0 of labels tends to exhibit a higher feature_3 value density than value 1 of labels for all the values of feature_13. 
+* Value 1 of labels tends to exhibit a spreader distribution of feature_3 value than value 1 of labels for all the values of feature_13.
+
+### feature_3 values relationship with discrete variables by labels:
+
+```{r}
+t1=ggplot(aes(x = feature_14, y = feature_3), data = insurance) + 
+    geom_point(aes(color=labels),alpha=1/4, position = 'jitter') +
+    ggtitle(' Feature_3 and  feature_14 Relationship by labels')
+t2= ggplot(aes(x = feature_15, y = feature_3), data = insurance) + 
+    geom_point(aes(color=labels),alpha=1/4, position = 'jitter') +
+    ggtitle(' Feature_3 and  feature_15 Relationship by labels')
+t3 = ggplot(aes(x = feature_13, y = feature_3), data = insurance) + 
+    geom_point(aes(color=labels),alpha=1/4, position = 'jitter') +
+    ggtitle(' Feature_3 and  feature_13 Relationship by labels')
+t4= ggplot(aes(x = feature_12, y = feature_3), data = insurance) + 
+    geom_point(aes(color=labels),alpha=1/4, position = 'jitter') +
+    ggtitle(' Feature_3 and  feature_12 Relationship by labels')
+t5= ggplot(aes(x = feature_11, y = feature_3), data = insurance) + 
+    geom_point(aes(color=labels),alpha=1/4, position = 'jitter') +
+    ggtitle(' Feature_3 and  feature_11 Relationship by labels')
+
+grid.arrange( t1,t2,t3,t4,t5, ncol = 1)
+
+```
+
+```{r}
+t6 =ggplot(aes(x = feature_10, y = feature_3), data = insurance) + 
+    geom_point(aes(color=labels),alpha=1/4, position = 'jitter') +
+    ggtitle(' Feature_3 and  feature_10 Relationship by labels')
+t7= ggplot(aes(x = feature_9, y = feature_3), data = insurance) + 
+    geom_point(aes(color=labels),alpha=1/4, position = 'jitter') +
+    ggtitle(' Feature_3 and  feature_9 Relationship by labels')
+t8= ggplot(aes(x = feature_8, y = feature_3), data = insurance) + 
+    geom_point(aes(color=labels),alpha=1/4, position = 'jitter') +
+    ggtitle(' Feature_3 and  feature_8 Relationship by labels')
+t9= ggplot(aes(x = feature_7, y = feature_3), data = insurance) + 
+    geom_point(aes(color=labels),alpha=1/4, position = 'jitter') +
+    ggtitle(' Feature_3 and  feature_7 Relationship by labels')
+
+grid.arrange( t6,t7,t8,t9, ncol = 1)
+```
+
+All the plots indicate that for the same values, label 1 has higher feature_3 than the label 0 on average across all the feature values.
+
+### Feature_3 and feature_5 relationship for each value of feature_11 by labels 
+```{r}
+ggplot(aes(x=feature_3, y=feature_5),data = insurance) + 
+    geom_jitter(aes(color = labels, bg = labels), alpha=1/10,,pch=21, cex=4) +
+    facet_wrap(~feature_11) +
+    scale_color_brewer(type = 'div') +
+    ggtitle('Feature_5 and feature_3 relationship for each classes of feature_11')
+```
+
+* feature_3 value is higher for feature_5 when label is 1 for any value of feature_11.
+* For label 0, feature_5 values are in higher ranges when feature_11 value is 1 
+## Summary:
+* The dataset is heavily biased to the value of 0 of labels.
+* Feature_13 and feature_11 varies relatively more as they possess higher standard deviation.
+* Only feature_5 and feature_15 has strong correlations.
+* Feature_3 has the highest correlation with labels which is a moderate and positive correlation.
+* Labels are weakly correlated to feature_5, feature_6, feature_11, feature_13 and feature_15.
+* Data are not quite separatable by each labels for all variables.
+* In case of multivariate analysis, feature_3 shows more independence among each labels only for higher value of feature_13.  
+* For records with the value of 1 for labels, the feature_3 value is higher than that of labels with 0 across all the values of feature_14 and feature_15
+
+
+
+
+
