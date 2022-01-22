@@ -127,6 +127,7 @@ p16<-ggplot(aes(x=labels), data =  insurance) +
 p16
 ```
 
+
 Majority of the labels are zero. So, the data is heavily imbalanced
 
 ### Outliers among the features:
@@ -140,6 +141,7 @@ for (i in 1:(length(insurance))) {
         boxplot(insurance[,i], main = names(insurance[i]), type="l", col = 'lightblue') 
 }
 ```
+
 It is very hard to assess the distribution observing the boxplot for many features. So let's have a look on distribution for features
 
 ### Histogram of all variables:
@@ -218,6 +220,7 @@ p15<-ggplot(aes(x=feature_15), data =  insurance) +
 
 grid.arrange(p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, ncol = 4)
 ```
+
 * feature_0 is showing close to a uniform distribution with right skewness.
 * feature_1, feature_3, feature_4,feature_5 and feature_6 are heavily right skewed.
 * feature_2 distribution is multimodal. Significant number of values are negative.
@@ -259,6 +262,7 @@ The following features are corelated with labels:
 ```{r}
 plot(insurance$feature_5, insurance$feature_15)
 ```
+
 * Very high value (=3) of feature_15 is only available when feature_5 values are relatively low(<6)
 * feature_5 values are in higher range more when feature_15 values are relatively low.
 
@@ -270,6 +274,7 @@ insurance$labels <- as.factor(insurance$labels)
 p4 = ggplot(aes(x=feature_3),data =insurance) + geom_density(aes(fill = labels)) +  ggtitle('feature_3 density by labels')
 p4
 ```
+
 It is clearly evident that data density is distributed with low spreading for feature_3 when labels value is 0 compared to 1 value.
 
 ### Investigating data spreading of all features w.r.t the classes of labels
@@ -311,6 +316,7 @@ p16 = ggplot(aes(x=feature_15),data =insurance) + geom_density(aes(fill = labels
 
 grid.arrange( p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15,p16, ncol = 3)
 ```
+
 No feature shows specific independence in data spreading for each values of labels.
 
 ### Investigating relations among continuous features:
@@ -407,7 +413,9 @@ ggplot(aes(x=feature_3, y=feature_5),data = insurance) +
 
 * feature_3 value is higher for feature_5 when label is 1 for any value of feature_11.
 * For label 0, feature_5 values are in higher ranges when feature_11 value is 1 
+
 ## Summary:
+
 * The dataset is heavily biased to the value of 0 of labels.
 * Feature_13 and feature_11 varies relatively more as they possess higher standard deviation.
 * Only feature_5 and feature_15 has strong correlations.
@@ -417,7 +425,193 @@ ggplot(aes(x=feature_3, y=feature_5),data = insurance) +
 * In case of multivariate analysis, feature_3 shows more independence among each labels only for higher value of feature_13.  
 * For records with the value of 1 for labels, the feature_3 value is higher than that of labels with 0 across all the values of feature_14 and feature_15
 
+### Key decisions obtained from EDA:
 
+* We have observed from the graphs and statistics of exploratory data analysis that the classes (labels) are not quite separate across the data for almost all the variables. 
+* So a simple linear regression will not be good enough to be an efficient classifier. 
+* Here, logistic regression and KNN has been chosen as the classifier for building the model. 
+
+
+# Model Development:
+
+## Multiple Logistic Classification Model:
+
+```{r}
+# Creating training and validation data sets
+sample_size = floor(0.8*nrow(insurance))
+set.seed(777)
+# randomly split data in r
+picked = sample(seq_len(nrow(insurance)),size = sample_size)
+train =insurance[picked,]
+valid =insurance[-picked,]
+labels_valid=valid$labels
+```
+
+### First Logistic Model: taking all features into account:
+
+```{r}
+fit.glm_1 = glm(labels ~ ., data = train, family = binomial)
+summary(fit.glm_1)
+
+```
+```{r}
+# Predicting model accuracy on validation data set followed by generating confusion matrix 
+probs <- predict(fit.glm_1, valid, type = "response")
+pred.glm_1 <- rep(0, length(probs))
+pred.glm_1[probs >0.5] <- 1
+confusionMatrix(table(pred.glm_1, labels_valid), labels = 1)
+```
+
+So first logistic model accuracy on validation data set is 0.880
+
+
+### Second Logistic model: with feature-selection using anova:
+
+```{r}
+# Selecting important features using anova
+anova(fit.glm_1, test = "Chisq")
+```
+
+So, feature_0, feature_1, feature_2, feature_10,feature_14 can be removed from the model as the drop of deviance is relatively small (<35).
+
+```{r}
+fit.glm_2 = glm(labels ~ .-feature_0-feature_1-feature_2-feature_10-feature_14, data = train, family = binomial)
+
+summary(fit.glm_2)
+```
+
+```{r}
+probs <- predict(fit.glm_2, valid, type = "response")
+pred.glm_2 <- rep(0, length(probs))
+pred.glm_2[probs >0.5] <- 1
+confusionMatrix(table(pred.glm_2, labels_valid), labels = 1)
+```
+
+
+* So, model accuracy remains same (0.880) and precision decreased slightly. However, model complexity is reduced significantly.
+
+### Third Logistic model: Further feature reduction based on Z-static:
+
+* We know that a bigger Z static(both positive and negative) indicates that the corresponding true regression coefficient is not 0 and the corresponding X-variable matters. 
+* So, here, we can remove the feature_7 and feature_8 from the second model as they showed relatively small z value(-5>Z>5) (see output at line 481: summary statistics of second model )
+* In that case, only feature_0,feature_1,feature_2,feature_7,feature_8,feature_10,feature_14 shall remain in the third logistic model
+
+```{r}
+fit.glm_3 = glm(labels ~ .-feature_0-feature_1-feature_2-feature_7-feature_8-feature_10-feature_14, data = train, family = binomial)
+summary(fit.glm_3)
+
+```
+```{r}
+probs <- predict(fit.glm_3, valid, type = "response")
+pred.glm_3 <- rep(0, length(probs))
+pred.glm_3[probs >0.5] <- 1
+confusionMatrix(table(pred.glm_3, labels_valid), labels = 1)
+```
+```{r}
+with(fit.glm_3, pchisq(null.deviance - deviance, df.null - df.residual, lower.tail = FALSE))
+```
+
+* So, model performance did not change at all. The number of model predictors are decreased. The above R-chunk proves that third logistic model varies significantly than null model.
+
+### Fourth Multiple Logistic Model: Feature selected from EDA:
+
+From EDA, we see that feature_3,feature_5,feature_6,feature_11, feature_13, feature_15 have better correlations with labels.
+
+```{r}
+set.seed(3)
+fit.glm_4 = glm(labels ~ feature_3 +feature_5+feature_6+feature_11+feature_13+ feature_15 , data = train, family = binomial)
+summary(fit.glm_4)
+```
+
+```{r}
+probs <- predict(fit.glm_4, valid, type = "response")
+pred.glm_4 <- rep(0, length(probs))
+pred.glm_4[probs >0.5] <- 1
+confusionMatrix(table(pred.glm_4, labels_valid), labels = 1)
+```
+
+* Though the model accuracy remains almost same,precision is reduced significantly.
+
+* Considering the above 4 logistic models, model-3 is preferable as it has less model complexity (9 predictors) and 
+
+* Model accuracy and precision is almost same to that of best accuracy shown model,i.e model-1. 
+
+### Cross-checking Selected logistic model performance on whole training set:
+
+```{r}
+insurance.labels<-insurance$labels
+probs <- predict(fit.glm_3, insurance, type = "response")
+pred.glm_final <- rep(0, length(probs))
+pred.glm_final[probs >0.5] <- 1
+confusionMatrix(table(pred.glm_final, insurance.labels), labels = 1)
+```
+
+* So model accuracy is 0.889. That means, chosen logistic model performance is quite consistent among validation and whole training data set. Now let's check another classifier for having better model.
+
+
+## K-Nearest Neighbour(KNN) Classification:
+
+### First KNN model: considering all features of the data-set:
+
+```{r}
+library(class)
+```
+
+```{r}
+train.labels <- train$labels
+valid.labels <- valid$labels
+```
+
+```{r}
+set.seed (1)
+knn.pred1 <- knn(train, valid, train.labels , k = 3)
+confusionMatrix(table(knn.pred1, valid.labels), labels = 1)
+```
+
+Clearly, the model is over fitted as accuracy is 100%. So, further tuning of the parameters is impossible. In that case, reducing features in the model is one way to overcome the overfitting problem.
+
+### Second KNN Model: Considering only the chosen features of ultimately selected logistic model:
+
+```{r}
+train.x <- train[,c("feature_3","feature_4","feature_5","feature_6","feature_9","feature_11","feature_12","feature_13","feature_15")]
+valid.x <- valid[,c("feature_3","feature_4","feature_5","feature_6","feature_9","feature_11","feature_12","feature_13","feature_15")]
+```
+
+```{r}
+set.seed (1)
+knn.pred2 <- knn(train.x, valid.x, train.labels , k = 3)
+confusionMatrix(table(knn.pred2, valid.labels), labels = 1)
+```
+
+So, the model is showing less accuracy compared to other models : 0.874
+
+Now selecting appropriate K hyper-parameter:
+
+```{r}
+i=1
+k.optm=1
+for (i in 1:20){
+ knn.mod <- knn(train.x,valid.x,train.labels, k=i)
+ k.optm[i] <- 100 * sum(valid.labels == knn.mod)/NROW(valid.labels)
+ k=i
+ cat('for K ',k,':',k.optm[i],';')
+}
+```
+
+* In this case, we can select K=10.
+* Comparing both models of KNN, based on validation set method, model1 performs far better than model2. Model-2 performance is almost similar to the performance of chosen logistic model in terms of accuracy. However, precision is better.
+* p-value of model-2 is also very high.
+* However, the variation in model accuracy and higher p-value might be the result of how the data is splitted. So, use of another validation technique for cross checking is important. 
+* For cross-checking model-performance, K-fold cross validation technique can be used which will nullify the impact of data-splitting for validation-set technique.
+
+### Cross-checking KNN model-2 performance using K-fold cross validation technique:
+
+```{r}
+set.seed(33)
+trctrl <- trainControl(method = "cv", number = 10, savePredictions=TRUE)
+fit_allfeature <- train(factor(labels) ~., data = valid, method = "knn", trControl=trctrl, tuneLength = 0)
+fit_allfeature 
+```
 
 
 
