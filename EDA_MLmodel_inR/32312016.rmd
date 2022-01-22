@@ -441,9 +441,9 @@ ggplot(aes(x=feature_3, y=feature_5),data = insurance) +
 sample_size = floor(0.8*nrow(insurance))
 set.seed(777)
 # randomly split data in r
-picked = sample(seq_len(nrow(insurance)),size = sample_size)
-train =insurance[picked,]
-valid =insurance[-picked,]
+splitted = sample(seq_len(nrow(insurance)),size = sample_size)
+train =insurance[splitted,]
+valid =insurance[-splitted,]
 labels_valid=valid$labels
 ```
 
@@ -530,11 +530,21 @@ pred.glm_4[probs >0.5] <- 1
 confusionMatrix(table(pred.glm_4, labels_valid), labels = 1)
 ```
 
+
 * Though the model accuracy remains almost same,precision is reduced significantly.
 
 * Considering the above 4 logistic models, model-3 is preferable as it has less model complexity (9 predictors) and 
 
-* Model accuracy and precision is almost same to that of best accuracy shown model,i.e model-1. 
+* Model accuracy and precision is almost same to that of best accuracy shown model,i.e model-1. Following table confirms that:
+ 
+|Model_Name                  | Evaluation_Technique     | Accuracy  | Model Complexity      | Specificity |
+|----------------------------|--------------------------|---------- |-----------------------|-------------|
+|Logistic Regression-model-1 | Validation set approach  | 0.8802    | Most (All features)   | 0.1911      |
+|Logistic Regression-model-2 | Validation set approach  | 0.8800    | Moderate (11 features)| 0.1782      |
+|Logistic Regression-model-3 | Validation set approach  | 0.8800    | Moderate (9 features) | 0.1811      |
+|Logistic Regression-model-4 | Validation set approach  | 0.8806    | Moderate (6 features) | 0.1679      |
+
+
 
 ### Cross-checking Selected logistic model performance on whole training set:
 
@@ -557,18 +567,14 @@ confusionMatrix(table(pred.glm_final, insurance.labels), labels = 1)
 library(class)
 ```
 
-```{r}
-train.labels <- train$labels
-valid.labels <- valid$labels
-```
 
 ```{r}
 set.seed (1)
-knn.pred1 <- knn(train, valid, train.labels , k = 3)
-confusionMatrix(table(knn.pred1, valid.labels), labels = 1)
+knn.pred1 <- knn(train[,-17], valid[,-17], train$labels , k = 3)
+confusionMatrix(table(knn.pred1, valid$labels), labels = 1)
 ```
 
-Clearly, the model is over fitted as accuracy is 100%. So, further tuning of the parameters is impossible. In that case, reducing features in the model is one way to overcome the overfitting problem.
+So, KNN model-1 accuracy is 0.878
 
 ### Second KNN Model: Considering only the chosen features of ultimately selected logistic model:
 
@@ -579,11 +585,11 @@ valid.x <- valid[,c("feature_3","feature_4","feature_5","feature_6","feature_9",
 
 ```{r}
 set.seed (1)
-knn.pred2 <- knn(train.x, valid.x, train.labels , k = 3)
-confusionMatrix(table(knn.pred2, valid.labels), labels = 1)
+knn.pred2 <- knn(train.x, valid.x, train$labels , k = 3)
+confusionMatrix(table(knn.pred2, valid$labels), labels = 1)
 ```
 
-So, the model is showing less accuracy compared to other models : 0.874
+So, KNN model-2 accuracy : 0.874
 
 Now selecting appropriate K hyper-parameter:
 
@@ -591,27 +597,85 @@ Now selecting appropriate K hyper-parameter:
 i=1
 k.optm=1
 for (i in 1:20){
- knn.mod <- knn(train.x,valid.x,train.labels, k=i)
- k.optm[i] <- 100 * sum(valid.labels == knn.mod)/NROW(valid.labels)
+ knn.mod <- knn(train.x,valid.x,train$labels, k=i)
+ k.optm[i] <- 100 * sum(valid$labels == knn.mod)/NROW(valid$labels)
  k=i
  cat('for K ',k,':',k.optm[i],';')
 }
 ```
 
 * In this case, we can select K=10.
-* Comparing both models of KNN, based on validation set method, model1 performs far better than model2. Model-2 performance is almost similar to the performance of chosen logistic model in terms of accuracy. However, precision is better.
-* p-value of model-2 is also very high.
-* However, the variation in model accuracy and higher p-value might be the result of how the data is splitted. So, use of another validation technique for cross checking is important. 
-* For cross-checking model-performance, K-fold cross validation technique can be used which will nullify the impact of data-splitting for validation-set technique.
+* Comparing both models of KNN, based on validation set method, model1 performs better than model2.
+* p-value of both KNN model is also very low which justifies the statistical significance of the models.
+* However, the variation in model accuracy might be the result of how the data is splitted. So, use of another validation technique for cross checking is important. 
+* For cross-checking model-performance, K-fold cross validation technique can be used which will nullify the impact of data-splitting which is available in validation-set technique.
 
-### Cross-checking KNN model-2 performance using K-fold cross validation technique:
+### Cross-checking KNN model performance using K-fold cross validation technique: selection of ultimate KNN model
+
+#### K-Fold cross validation on KNN Model-1
 
 ```{r}
-set.seed(33)
-trctrl <- trainControl(method = "cv", number = 10, savePredictions=TRUE)
-fit_allfeature <- train(factor(labels) ~., data = valid, method = "knn", trControl=trctrl, tuneLength = 0)
-fit_allfeature 
+library(caret)
+library(class)
+folds = createFolds(insurance$labels, k = 10)
+cv = lapply(folds, function(x) {
+  training_fold = insurance[-x,]
+  test_fold = insurance[x, ]
+  y_pred = knn( training_fold[,-17], test_fold[,-17], training_fold[,17] , k = 10)
+  #classifier = KNN(formula = Purchased ~ .,data = training_fold,type = 'C-classification', kernel = 'radial')
+  #y_pred = predict(classifier, newdata = test_fold[-17])
+  cm = table(test_fold[, 17], y_pred)
+  accuracy = (cm[1,1] + cm[2,2]) / (cm[1,1] + cm[2,2] + cm[1,2] + cm[2,1])
+  return(accuracy)
+})
+accuracy = mean(as.numeric(cv))
+accuracy
+
 ```
 
 
+#### K-Fold cross validation on KNN Model-2:
 
+```{r}
+library(caret)
+library(class)
+folds = createFolds(insurance$labels, k = 10)
+cv = lapply(folds, function(x) {
+  training_fold = insurance[-x,c("feature_3","feature_4","feature_5","feature_6","feature_9","feature_11","feature_12","feature_13","feature_15","labels") ]
+  test_fold = insurance[x,c("feature_3","feature_4","feature_5","feature_6","feature_9","feature_11","feature_12","feature_13","feature_15","labels") ]
+  y_pred = knn( training_fold[,-10], test_fold[,-10], training_fold[,10] , k = 10)
+  #classifier = KNN(formula = Purchased ~ .,data = training_fold,type = 'C-classification', kernel = 'radial')
+  #y_pred = predict(classifier, newdata = test_fold[-17])
+  cm = table(test_fold[, 10], y_pred)
+  accuracy = (cm[1,1] + cm[2,2]) / (cm[1,1] + cm[2,2] + cm[1,2] + cm[2,1])
+  return(accuracy)
+})
+accuracy = mean(as.numeric(cv))
+accuracy
+```
+* So, K-fold cross-validation ensures better accuracy of KNN model-2. And this result is more reliable compared to validation data set technique.
+
+Now, it is time to compare all KNN model accuracy:
+
+|Model_Name         | Evaluation_Technique              |Accuracy  | Model Complexity     |
+|-------------------|-----------------------------------|----------|----------------------|
+|KNN-model-1        | Validation set approach           | 0.8778   | Most (All features)  |
+|KNN-model-2        | Validation set approach           | 0.8736   | Moderate (9 features)|
+|KNN-model-1        | K-fold cross validation approach  | 0.8878   | Most (All features)  |
+|KNN-model-2        | K-fold cross validation approach  | 0.8943   | Moderate (9 features)|
+
+So, selected KNN model is KNN model-2
+
+#### Crosschecking KNN model-2 performance using whole training data set (here it is 'insurance' data)
+
+```{r}
+set.seed (1)
+knn.pred0 <- knn(train.x, insurance[,c("feature_3","feature_4","feature_5","feature_6","feature_9","feature_11","feature_12","feature_13","feature_15")], train$labels , k = 10)
+confusionMatrix(table(knn.pred0, insurance$labels), labels = 1)
+```
+So, the validation of KNN model on whole training set provides better accuracy as it is expected; because maximum fraction of whole insurance data were used for training the model. 
+
+
+# Model Evaluation Based on Test Data
+
+We already performed K-fold cross validation 
