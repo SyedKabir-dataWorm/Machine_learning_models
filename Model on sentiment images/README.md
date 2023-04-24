@@ -44,7 +44,7 @@ their corresponding labels as correctly as possible.
 <br>- Name of training data-set : trainset_students.csv</br>
 <br>- Number of training images: 9437</br>
 <br>- Name of testing data-set : testset_students.csv</br>
-<br>- Number of testing images: 9437</br>
+<br>- Number of testing images: 3146</br>
 
 **Detailed Description of the Data-set:**
 
