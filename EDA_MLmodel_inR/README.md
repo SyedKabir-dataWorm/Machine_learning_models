@@ -11,17 +11,20 @@ you are given 16 distinguishing factors that can help in understanding the custo
 objective as a data scientist is to build a Machine Learning model that can predict whether the
 insurance company will lose a customer or not using these factors. You are provided with 16
 anonymized factors (feature_0 to feature 15) that influence the churn of customers in the insurance
-industry. The datasets are splitted as follows:
+industry. 
+
+The datasets are splitted as follows:
 ● Train.csv – 27126 observations.
 ○ Predictors: 16 anonymized factors (feature_0 to feature 15)
 ○ Target variable: Label (‘1’ indicates churn)
+
 ● Test.csv – 6782 observations.
 In this assessment, the aim is to build statistical learning models that can predict the customer churn.
 Specifically, the problem you are going to solve is:
-● Can you accurately predict the customer churn for the insurance company given the
-collected data?
-● Can you well explain your prediction and the associated findings? For example, identify the
-key factors that are strongly associated with the response variable, i.e., the Label.
+<br>    Can you accurately predict the customer churn for the insurance company given the
+collected data?</br>
+<br>    Can you well explain your prediction and the associated findings? For example, identify the
+key factors that are strongly associated with the response variable, i.e., the Label.</br>
 
 **2. Task description**
 
