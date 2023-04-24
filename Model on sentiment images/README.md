@@ -3,10 +3,11 @@
 * The source of the data: 
 	- https://drive.google.com/drive/folders/1eWap2APLRbQltktO4j1bZNWyshMVailT?usp=sharing
 
+..............................................................................................
+Details of the tasks
+..............................................................................................
 
-**Details of the tasks**
-
-Introduction
+**Introduction**
 
 “A picture is worth a thousand words'' is an English idiom that is becoming more accurate
 every day. Thanks to social networks, images have become one of the most important
@@ -35,7 +36,7 @@ and prediction should share the same feature space. The aim of this challenge is
 a classifier that can assign the sentiment polarity of a set of general and public images to
 their corresponding labels as correctly as possible.
 
-Dataset:
+**Dataset:**
 <br>- Data Sourece : Public</br>
 <br>- Data type: Image</br>
 <br>- Classes: 5</br>
@@ -44,7 +45,7 @@ Dataset:
 <br>- Name of testing data-set : testset_students.csv</br>
 <br>- Number of testing images: 9437</br>
 
-Detailed Description of the Data-set:
+**Detailed Description of the Data-set:**
 
 ● trainset_students.csv contains training IDs , labels and labels confidence:
 
@@ -58,7 +59,7 @@ their agreement with the image sentiment polarity.
 
 ● testset_students.csv: only testing ids are available. It contains 3146 images.
 
-Data Preparation & Feature Extraction
+**Data Preparation & Feature Extraction**
 
 Selecting relevant features and deciding how to encode them for a classification algorithm is
 crucial for learning a good model. Raw images cannot be used directly as an input to
@@ -67,20 +68,16 @@ represented in a numerical form.
 
 Here are some useful resources that can give you some idea about feature extraction from images:
 
-● https://towardsdatascience.com/image-feature-extraction-traditional-and-dee
-p-learning-techniques-ccc059195d04
+● https://towardsdatascience.com/image-feature-extraction-traditional-and-deep-learning-techniques-ccc059195d04
 ● https://kapernikov.com/tutorial-image-classification-with-scikit-learn/
-● https://www.analyticsvidhya.com/blog/2019/08/3-techniques-extract-feature
-s-from-image-data-machine-learning-python/
+● https://www.analyticsvidhya.com/blog/2019/08/3-techniques-extract-features-from-image-data-machine-learning-python/
 ● https://freecontent.manning.com/the-computer-vision-pipeline-part-4-featureextraction/
 ● https://analyticsindiamag.com/image-feature-extraction-using-scikit-image-ahands-on-guide/
-● https://tensorflow.rstudio.com/tutorials/beginners/basic-ml/tutorial_basic_cl
-assification/
-● https://analyticsindiamag.com/hands-on-guide-to-image-classification-using-r
-/
+● https://tensorflow.rstudio.com/tutorials/beginners/basic-ml/tutorial_basic_classification/
+● https://analyticsindiamag.com/hands-on-guide-to-image-classification-using-r/
 ● https://rpubs.com/spalladino14/653239
 
-Classifier
+**Classifier**
 
 The task is to develop a classifier that can give you the most accurate prediction in the
 image sentiment polarity classification task. The algorithms that you can use are not limited
@@ -91,16 +88,14 @@ empirically compare at least 3 different types of classification methods.Please 
 different input features will only count as one type of classifier. For example, logistic
 regression will be counted as one type of classifier, no matter what features you used.
 
-Evaluation
+**Evaluation**
 
 The evaluation method used in testing is the accuracy score, which is defined as the
 proportion of correct predictions among all of the predictions.
 
 𝑎𝑐𝑐𝑢𝑟𝑎𝑐𝑦 = 𝑛𝑢𝑚𝑏𝑒𝑟 𝑜𝑓 𝑐𝑜𝑟𝑟𝑒𝑐𝑡 𝑝𝑟𝑒𝑑𝑖𝑐𝑡𝑖𝑜𝑛𝑠 / 𝑛𝑢𝑚𝑏𝑒𝑟 𝑜𝑓 𝑎𝑙𝑙 𝑝𝑟𝑒𝑑𝑖𝑐𝑡𝑖𝑜𝑛s
 
-Report
-
-plagiarism check.
+**Report**
 
 A pdf report, “report.pdf” is to be created. This pdf contains more detailed analysis of the
 work. This file should show how you finished the task. Ideally you should show what
@@ -119,9 +114,12 @@ comprehensive analysis of how the comparisons are done. For example, the
 report can include (but not limited to)
 
 i. A description of the classifier(s) considered in your comparison.
+
 ii. The detailed experimental settings, which could include, for example,
 the discussion of how the cross-validation is set up, how the
 parameters for the model considered (if applicable) are chosen.
+
 iii. Classification accuracy with comprehensive discussion.
+
 iv. The justification of the final model submitted.
 
