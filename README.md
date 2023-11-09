@@ -1,9 +1,4 @@
-This repository is consisted with three individual model-building works: 
-
-- first one for insurance data, 
-- second one is for health data and 
-- the last folder is about sentiment analysis of images.
-
+This repository is consisted with three individual model-building works in three folders: 
 **Description of the folders:**
 
 1) EDA_MLmodel_inR : This folder contains the files related to model buiding in R using insurance-customer-data. The classification problem identifies whether the insurance company will lose a customer or not based on 16 features.
